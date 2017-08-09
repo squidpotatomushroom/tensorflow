@@ -19,33 +19,31 @@ import org.tensorflow.TensorFlow;
 
 public class ImageClassifier {
 
-    public String classify() {
+    Path modelPath;
+    Path labelsPath;
+    byte[] graphDef;
+    List<String> labels;
+    public ImageClassifier() {
         String modelDir = "src/main/resources";
-        String imageFile = "src/main/resources/image.jpg";
 
-        byte[] graphDef = readAllBytesOrExit(Paths.get(modelDir, "tensorflow_inception_graph.pb"));
-        List<String> labels =
-                readAllLinesOrExit(Paths.get(modelDir, "imagenet_comp_graph_label_strings.txt"));
-        byte[] imageBytes = readAllBytesOrExit(Paths.get(imageFile));
-
-        try (Tensor image = constructAndExecuteGraphToNormalizeImage(imageBytes)) {
-            float[] labelProbabilities = executeInceptionGraph(graphDef, image);
-            int bestLabelIdx = maxIndex(labelProbabilities);
-            return
-                    String.format(
-                            "BEST MATCH: %s (%.2f%% likely)",
-                            labels.get(bestLabelIdx), labelProbabilities[bestLabelIdx] * 100f);
-        }
+        graphDef = readAllBytesOrExit(Paths.get(modelDir, "tensorflow_inception_graph.pb"));
+        labels = readAllLinesOrExit(Paths.get(modelDir, "imagenet_comp_graph_label_strings.txt"));
     }
 
+    public ImageClassifier(Path modelPath, Path labelsPath) {
+        this.modelPath = modelPath;
+        this.labelsPath = labelsPath;
+
+        byte[] graphDef = readAllBytesOrExit(this.modelPath);
+        this.labels = readAllLinesOrExit(this.labelsPath);
+    }
+
+    /**
+     * Classifies the file that is passed in based on the List<String>labels and the model
+     * @param file
+     * @return
+     */
     public String classifyImage(MultipartFile file) {
-        String modelDir = "src/main/resources";
-
-        byte[] graphDef = readAllBytesOrExit(Paths.get(modelDir, "tensorflow_inception_graph.pb"));
-        List<String> labels =
-                readAllLinesOrExit(Paths.get(modelDir, "imagenet_comp_graph_label_strings.txt"));
-
-
         byte[] imageBytes = new byte[0];
         try {
             imageBytes = file.getBytes();
@@ -56,6 +54,7 @@ public class ImageClassifier {
         try (Tensor image = constructAndExecuteGraphToNormalizeImage(imageBytes)) {
             float[] labelProbabilities = executeInceptionGraph(graphDef, image);
             int bestLabelIdx = maxIndex(labelProbabilities);
+            this.printAllAbove(labelProbabilities, 0.7f);
             return
                     String.format(
                             "BEST MATCH: %s (%.2f%% likely)",
@@ -111,6 +110,14 @@ public class ImageClassifier {
                 }
                 int nlabels = (int) rshape[1];
                 return result.copyTo(new float[1][nlabels])[0];
+            }
+        }
+    }
+
+    private void printAllAbove(float[] probabilities, float threshold) {
+        for (int i = 1; i < probabilities.length; ++i ) {
+            if (probabilities[i] > threshold) {
+                System.out.println(labels.get(i) + ": (" + probabilities[i] + ")");
             }
         }
     }

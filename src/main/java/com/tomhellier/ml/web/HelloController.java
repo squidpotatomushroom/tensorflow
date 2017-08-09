@@ -23,6 +23,8 @@ import static com.tomhellier.ml.tensorflow.ImageClassifier.readAllLinesOrExit;
 @Component
 public class HelloController {
 
+    private ImageClassifier ic = new ImageClassifier();
+
     @RequestMapping("/hello")
     public String index() {
         return "Greetings from Spring Boot!";
@@ -44,12 +46,6 @@ public class HelloController {
         return new Gson().toJson(labels);
     }
 
-    @RequestMapping("/classify")
-    public String classify() {
-        ImageClassifier ic = new ImageClassifier();
-        return ic.classify();
-    }
-
     @GetMapping("/")
     public String listUploadedFiles(Model model) throws IOException {
         return "uploadForm";
@@ -58,9 +54,6 @@ public class HelloController {
     @PostMapping("/")
     public String handleFileUpload(@RequestParam("file") MultipartFile file,
                                    RedirectAttributes redirectAttributes) {
-
-        ImageClassifier ic = new ImageClassifier();
-
         redirectAttributes.addFlashAttribute("message",
                 "You successfully uploaded " + file.getOriginalFilename() + "!");
 
